@@ -9,6 +9,7 @@ import Monetizacion from "@/components/sections/Monetizacion";
 import Zonas from "@/components/sections/Zonas";
 import Estacionalidad from "@/components/sections/Estacionalidad";
 import Operacion from "@/components/sections/Operacion";
+import Mercado from "@/components/sections/Mercado";
 
 const SECTIONS = [
   { id: "resumen", label: "Resumen", ready: true, desc: "La meta de 100 clientes por semana" },
@@ -19,7 +20,7 @@ const SECTIONS = [
   { id: "estacionalidad", label: "Estacionalidad", ready: true, desc: "Temporadas, crecimiento año contra año y semanas atípicas" },
   { id: "operacion", label: "Operación y capacidad", ready: true, desc: "Equipo, horas y nómina para llegar a la meta" },
   { id: "escenarios", label: "Escenarios" },
-  { id: "mercado", label: "Análisis de mercado" },
+  { id: "mercado", label: "Análisis de mercado", ready: true, desc: "El mercado de limpieza en Dallas-Fort Worth y dónde está Kiki's" },
 ] as { id: string; label: string; ready?: boolean; desc?: string }[];
 
 type Props = { visits: Visit[]; marketing: WeekMarketing[]; ops: WeekOps[]; cutoff: string; userEmail: string };
@@ -86,7 +87,7 @@ export default function Dashboard({ visits, marketing, ops, cutoff, userEmail }:
             </p>
           </div>
           <div className="filters">
-            {section !== "operacion" && (
+            {section !== "operacion" && section !== "mercado" && (
               <>
                 <label>
                   Ciudad
@@ -104,7 +105,7 @@ export default function Dashboard({ visits, marketing, ops, cutoff, userEmail }:
                 </label>
               </>
             )}
-            {section !== "retencion" && section !== "operacion" && (
+            {section !== "retencion" && section !== "operacion" && section !== "mercado" && (
               <div className="seg" role="group" aria-label="Periodo">
                 <button aria-pressed={filters.period === "12w"} onClick={() => setFilters((f) => ({ ...f, period: "12w" }))}>{WINDOW} semanas</button>
                 <button aria-pressed={filters.period === "all"} onClick={() => setFilters((f) => ({ ...f, period: "all" }))}>Histórico</button>
@@ -121,6 +122,7 @@ export default function Dashboard({ visits, marketing, ops, cutoff, userEmail }:
         {section === "zonas" && <Zonas visits={visits} cutoff={cutoff} filters={filters} />}
         {section === "estacionalidad" && <Estacionalidad filtered={filtered} marketing={marketing} cutoff={cutoff} filters={filters} />}
         {section === "operacion" && <Operacion visits={visits} ops={ops} marketing={marketing} cutoff={cutoff} />}
+        {section === "mercado" && <Mercado visits={visits} marketing={marketing} cutoff={cutoff} />}
       </main>
 
       {glossaryOpen && (

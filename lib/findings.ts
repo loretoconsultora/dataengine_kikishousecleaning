@@ -4,6 +4,7 @@ import {
 } from "./metrics";
 import { buildClients, clientStatus, cohorts, retentionCurve } from "./clients";
 import { PRICE_LIST, listPrice, listRow } from "./prices";
+import { MARKET, dfwMarketEstimate } from "./market";
 import { atypicalWeeks, capacityPlan, dayOfWeek, monthIndex, opsSummary, seasonSeries, yearOverYear, yoyTotal } from "./analysis";
 
 const DAY = 86_400_000;
@@ -89,8 +90,14 @@ export function computeFindings(visits: Visit[], marketing: WeekMarketing[], ops
   const firstVisits = visits.filter((v) => v.is_first_visit);
   const noSource = firstVisits.length ? firstVisits.filter((v) => !v.client_source || v.client_source.startsWith("Sin")).length / firstVisits.length : 0;
 
+  // ---- mercado ----
+  const est = dfwMarketEstimate();
+  const yearFrom = end - 52 * 7 * DAY;
+  const yearRevenue = visits.filter((v) => v.status === "realizado" && t(v.week_start) >= yearFrom && t(v.week_start) < end).reduce((a, v) => a + (v.price ?? 0), 0);
+  const market = { total: est.total, yearRevenue, share: est.total ? yearRevenue / est.total : 0, googleCac35: MARKET.googleCpl / 0.35, googleCac20: MARKET.googleCpl / 0.2 };
+
   return {
-    goal, cutoff,
+    goal, cutoff, market,
     start: { clients, nuevos, recurrentes, shareNew, goalNew, goalRec, spend, cac, cacTarget, roas },
     retention: {
       totalClients: all.length, repeatRate: all.length ? repeaters.length / all.length : 0, oneTime, oneTimePct: all.length ? oneTime / all.length : 0,

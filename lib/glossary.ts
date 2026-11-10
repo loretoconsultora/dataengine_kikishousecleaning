@@ -142,4 +142,19 @@ export const GLOSSARY: { term: string; definition: string; formula?: string }[] 
     definition: "Equipo necesario para una meta de clientes, con el mismo tiempo por cliente y las horas por limpiadora elegidas.",
     formula: "(Meta × horas por cliente) ÷ horas por limpiadora",
   },
+  {
+    term: "Tamaño de mercado (DFW)",
+    definition: "Estimación propia del gasto anual en limpieza residencial en Dallas-Fort Worth, con el porcentaje de hogares que contrata y el gasto promedio por hogar de EE. UU.",
+    formula: "Hogares de DFW × % que contrata × (ingreso nacional del sector ÷ hogares que contratan)",
+  },
+  {
+    term: "Participación de mercado",
+    definition: "Ingreso por servicios de Kiki's en las últimas 52 semanas como porcentaje del tamaño de mercado estimado.",
+    formula: "Ingreso 52 semanas ÷ tamaño de mercado",
+  },
+  {
+    term: "Costo por lead (CPL)",
+    definition: "Lo que cuesta en publicidad conseguir un contacto interesado. El costo por cliente depende de cuántos de esos leads se cierran.",
+    formula: "Costo por cliente = CPL ÷ tasa de cierre",
+  },
 ];

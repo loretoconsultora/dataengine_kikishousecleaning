@@ -105,6 +105,17 @@ export default function Report({ f }: { f: Findings }) {
       )}
 
       <section className="report-sec">
+        <h2>Mercado</h2>
+        <ul>
+          <li>El mercado de limpieza residencial en Dallas-Fort Worth vale unos <b>{fmtUsd(f.market.total / 1e6)} millones al año</b> (estimación propia: 3.0 millones de hogares × 16% que contrata × gasto promedio nacional). Kiki&apos;s facturó {fmtUsd(f.market.yearRevenue)} en servicios en las últimas 52 semanas: una participación de <b>{pct(f.market.share, 2)}</b>.</li>
+          <li>Collin County fue el condado que más creció de la región en 2025 (+64,703 habitantes); ahí está el núcleo de clientes de Kiki&apos;s.</li>
+          <li>El ticket de Kiki&apos;s ({fmtUsd(m.ticket)}) está en la parte media del rango de DFW (USD 140–300 por limpieza estándar) y su tarifa de USD 55/h en la parte baja del rango de Dallas (USD 50–75).</li>
+          <li>En Google Ads un lead de limpieza cuesta unos USD 47: con 35% de cierre, un cliente nuevo cuesta {fmtUsd(f.market.googleCac35)}; con 20%, {fmtUsd(f.market.googleCac20)}. El CAC de USD 80 solo es alcanzable sumando referidos y reactivación, que en el sector generan la mayoría de los leads.</li>
+        </ul>
+        <p className="report-take"><b>Para la meta:</b> con menos de 0.2% del mercado, el crecimiento no depende de ganar la guerra de precios sino de retener, pedir reseñas y activar referidos.</p>
+      </section>
+
+      <section className="report-sec">
         <h2>Pendientes de validación</h2>
         <ul>
           <li>El <b>{pct(f.quality.noSource)}</b> de los clientes no tiene una fuente identificable. Sin ese dato no se puede calcular el CAC por fuente (Google, Thumbtack, networking, Melissa.com).</li>
