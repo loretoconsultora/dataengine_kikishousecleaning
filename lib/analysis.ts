@@ -135,3 +135,26 @@ export function capacityPlan(goalClients: number, hoursPerClient: number, hoursP
     payrollNeeded: hoursNeeded * costPerHour,
   };
 }
+
+/** Ingreso recurrente por ciudad: ingreso de servicios que no son la primera visita del cliente. */
+export function recurringByCity(visits: Visit[], cutoff: string, period: "12w" | "all", service: string) {
+  const end = t(weekStartOf(cutoff));
+  const from = period === "12w" ? end - WINDOW * 7 * DAY : -Infinity;
+  const minServices = period === "12w" ? 5 : 15;
+  const by = new Map<string, { total: number; recurring: number; n: number }>();
+  for (const v of visits) {
+    if (v.status !== "realizado" || (service !== "Todas" && v.service_family !== service)) continue;
+    const tt = t(v.week_start);
+    if (tt < from || tt >= end || !v.city || v.city.startsWith("Sin")) continue;
+    const r = by.get(v.city) ?? { total: 0, recurring: 0, n: 0 };
+    r.total += v.price ?? 0;
+    if (!v.is_first_visit) r.recurring += v.price ?? 0;
+    r.n += 1;
+    by.set(v.city, r);
+  }
+  const rows = [...by.entries()]
+    .filter(([, r]) => r.n >= minServices)
+    .map(([city, r]) => ({ city, recurring: r.recurring, share: r.total ? r.recurring / r.total : 0 }))
+    .sort((a, b) => b.recurring - a.recurring);
+  return { top: rows.slice(0, 5), bottom: rows.slice(-5).reverse(), max: rows[0]?.recurring ?? 0, minServices };
+}

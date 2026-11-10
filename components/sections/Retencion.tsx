@@ -196,22 +196,34 @@ export default function Retencion({ visits, cutoff, filters }: Props) {
               </tbody>
             </table>
           </div>
-          <h3 style={{ marginTop: 20 }}>Días entre visitas</h3>
+          <h3 style={{ marginTop: 20 }}>¿Vuelven cuando deberían?</h3>
+          <p className="muted small">Días reales entre una visita y la siguiente de un mismo cliente, contra la frecuencia que contrató</p>
           <div className="table-wrap">
             <table className="goal-table">
-              <thead><tr><th>Frecuencia</th><th>Mediana de días</th><th>Esperado</th><th>Intervalos medidos</th></tr></thead>
+              <thead><tr><th>Frecuencia</th><th>Debería volver</th><th>Vuelve (mediana)</th><th>Retraso</th><th>Visitas al año</th></tr></thead>
               <tbody>
-                {gapRows.map((g) => (
-                  <tr key={g.f}>
-                    <td>{g.f}</td>
-                    <td>{fmtInt(g.median)}</td>
-                    <td>{g.f === "Semanal" ? 7 : g.f === "Quincenal" ? 14 : g.f === "Mensual" ? 28 : "–"}</td>
-                    <td>{fmtInt(g.n)}</td>
-                  </tr>
-                ))}
+                {gapRows.map((g) => {
+                  const expected = g.f === "Semanal" ? 7 : g.f === "Quincenal" ? 14 : g.f === "Mensual" ? 28 : null;
+                  const delay = expected ? g.median - expected : null;
+                  const perYear = g.median ? 365 / g.median : 0;
+                  const ideal = expected ? 365 / expected : null;
+                  return (
+                    <tr key={g.f}>
+                      <td>{g.f}</td>
+                      <td>{expected ? `cada ${expected} días` : "–"}</td>
+                      <td>cada {fmtInt(g.median)} días</td>
+                      <td className={delay && delay > 1 ? "down" : ""}>{delay === null ? "–" : delay > 1 ? `+${fmtInt(delay)} días` : "a tiempo"}</td>
+                      <td>{fmt1(perYear)}{ideal && delay && delay > 1 ? <span className="muted"> de {fmt1(ideal)}</span> : null}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          <SectionNote>
+            Un retraso de pocos días se acumula: un cliente mensual que vuelve cada 32 días en lugar de 28 hace unas 2 visitas menos al año.
+            Los clientes marcados como &quot;única&quot; que aparecen aquí sí volvieron, lo que confirma que esa etiqueta hay que validarla.
+          </SectionNote>
         </div>
       </section>
     </>

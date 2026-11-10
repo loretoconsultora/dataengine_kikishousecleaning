@@ -6,7 +6,8 @@ import {
   ALL, WINDOW, avg, distribution, fmt1, fmtInt, fmtPct, fmtUsd, fmtWeek, lastWeeks, marketingAvg,
   scheduledAhead, weeklyClients, type Filters, type Visit, type WeekMarketing,
 } from "@/lib/metrics";
-import { AXIS, C_NEW, C_REC, CategoryPie, MixPie, Stat, tooltipStyle } from "@/components/ui";
+import { AXIS, C_NEW, C_REC, CategoryPie, MixPie, SectionNote, Stat, tooltipStyle } from "@/components/ui";
+import { recurringByCity } from "@/lib/analysis";
 
 type Props = {
   visits: Visit[];
@@ -58,6 +59,7 @@ export default function Resumen({ visits, filtered, marketing, cutoff, filters, 
   const ahead = useMemo(() => scheduledAhead(filtered, cutoff), [filtered, cutoff]);
   const aheadAvg = avg(ahead.slice(0, 7).map((a) => a.clients));
 
+  const cityRec = useMemo(() => recurringByCity(visits, cutoff, filters.period, filters.service), [visits, cutoff, filters.period, filters.service]);
   const chartWeeks = weeks.map((w) => ({ ...w, label: fmtWeek(w.week) }));
 
   return (
@@ -188,6 +190,21 @@ export default function Resumen({ visits, filtered, marketing, cutoff, filters, 
         </section>
 
         <section className="card">
+          <h2>Ingreso recurrente por ciudad</h2>
+          <p className="muted small">
+            Ingreso de clientes que ya habían contratado antes (sin su primer servicio), {filters.period === "12w" ? "últimas 12 semanas" : "histórico"}.
+            Solo ciudades con {cityRec.minServices}+ servicios en el periodo.
+          </p>
+          <div className="grid-2 inner">
+            <CityRank title="5 ciudades con más ingreso recurrente" rows={cityRec.top} max={cityRec.max} />
+            <CityRank title="5 ciudades con menos ingreso recurrente" rows={cityRec.bottom} max={cityRec.max} muted />
+          </div>
+          <SectionNote>
+            El porcentaje indica qué parte del ingreso de la ciudad viene de clientes que repiten. Las ciudades con bajo ingreso recurrente son candidatas a revisar precio, ruta o pauta.
+          </SectionNote>
+        </section>
+
+        <section className="card">
           <h2>Agendados por adelantado</h2>
           <p className="muted small">
             Clientes distintos que ya tienen servicio agendado. Promedio de las próximas 7 semanas: <b>{fmt1(aheadAvg)}</b>
@@ -227,3 +244,21 @@ function GoalRow({ name, color, now, goal, last, strong }: { name: string; color
   );
 }
 
+
+function CityRank({ title, rows, max, muted }: { title: string; rows: { city: string; recurring: number; share: number }[]; max: number; muted?: boolean }) {
+  return (
+    <div>
+      <h3>{title}</h3>
+      <ul className="bars city-bars">
+        {rows.map((r) => (
+          <li key={r.city}>
+            <span>{r.city}</span>
+            <div className={muted ? "mini-progress wide soft" : "mini-progress wide"}><span style={{ width: `${max ? (r.recurring / max) * 100 : 0}%` }} /></div>
+            <b>{fmtUsd(r.recurring)}</b>
+            <small className="muted">{fmtPct(r.share)} recurrente</small>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
