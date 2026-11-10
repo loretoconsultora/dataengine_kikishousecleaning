@@ -31,6 +31,8 @@ export type WeekMarketing = { week_start: string; marketing_spend: number | null
 /** Pago por servicio confiable: solo registros donde Pay1 es por servicio (hasta ~marzo 2026). */
 export const hasLabor = (v: Visit) => (v.labor_cost ?? 0) > 0 && (v.price ?? 0) > 0 && v.labor_cost! <= v.price! * 1.2;
 
+export type WeekOps = { week_start: string; services: number; clients: number; est_hours: number; active_cleaners: number };
+
 export type Filters = { city: string; service: string; period: "12w" | "all" };
 
 export const ALL = "Todas";

@@ -110,4 +110,36 @@ export const GLOSSARY: { term: string; definition: string; formula?: string }[] 
     term: "Densidad por ciudad",
     definition: "Servicios por semana en una ciudad. Más densidad significa rutas más cortas y más rentables.",
   },
+  {
+    term: "Índice estacional",
+    definition: "Qué tan fuerte es un mes contra un mes normal. Se calcula dentro de cada año para no confundir el crecimiento del negocio con temporada, y excluye el mes de arranque (febrero 2025).",
+    formula: "Promedio semanal de clientes del mes ÷ promedio semanal de ese año",
+  },
+  {
+    term: "Crecimiento año contra año",
+    definition: "Clientes por semana de 2026 contra los mismos meses de 2025. Solo meses con 3 o más semanas en ambos años.",
+    formula: "Suma de promedios 2026 ÷ suma de promedios 2025 − 1",
+  },
+  {
+    term: "Semana atípica",
+    definition: "Semana con 25% más o menos clientes que el promedio de sus 4 semanas previas. Se valida con Kiki's si fue clima, festivo u otro evento.",
+  },
+  {
+    term: "Limpiadoras activas",
+    definition: "Limpiadoras distintas registradas en el Excel cada semana. Solo se usa el conteo; los nombres no salen del Excel.",
+  },
+  {
+    term: "Horas de trabajo estimadas",
+    definition: "Horas-persona por servicio: N limpiadoras × M horas si la descripción lo indica; si no, las horas de la lista de precios por recámaras y baños × el multiplicador del tipo de servicio (Standard 1, Deep Clean 1.5, Move Out/In 1.75).",
+  },
+  {
+    term: "Costo por hora de trabajo",
+    definition: "Nómina semanal de limpiadoras de la hoja KPI dividida entre las horas estimadas de la semana.",
+    formula: "Nómina semanal ÷ horas estimadas",
+  },
+  {
+    term: "Limpiadoras necesarias",
+    definition: "Equipo necesario para una meta de clientes, con el mismo tiempo por cliente y las horas por limpiadora elegidas.",
+    formula: "(Meta × horas por cliente) ÷ horas por limpiadora",
+  },
 ];

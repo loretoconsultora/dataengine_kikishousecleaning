@@ -187,6 +187,47 @@ weekly = weekly[weekly["week_start"].notna()].drop_duplicates("week_start")
 weekly.to_csv(f"{OUT}/weekly_marketing.csv", index=False)
 pd.DataFrame([{"key": "data_cutoff", "value": str(CUTOFF.date())}]).to_csv(f"{OUT}/meta.csv", index=False)
 
+# ---------- operación semanal (capacidad) ----------
+# Horas-persona estimadas por servicio:
+#  1) si la descripción dice "N cleaners M hours" / "M HR N PP", se usa N×M;
+#  2) si no, horas de la lista vigente por recámaras/baños × multiplicador de la hoja AUTOMATION
+#     (Standard 1, Deep Clean 1.5, Move Out/Move In 1.75).
+LIST_HOURS = {(1, 1): 3.0, (2, 1): 3.5, (2, 2): 4.0, (3, 2): 4.5, (3, 3): 5.0, (4, 3): 5.5, (4, 4): 6.0, (5, 4): 7.0, (5, 5): 8.0}
+MULT = {"Deep Clean": 1.5, "Move Out": 1.75, "Move In": 1.75}
+
+def list_hours(bd, ba):
+    bd, ba = pd.to_numeric(bd, errors="coerce"), pd.to_numeric(ba, errors="coerce")
+    if pd.isna(bd) or bd <= 0:
+        return 4.5  # mediana de la lista
+    b = int(min(5, max(1, bd)))
+    bath = int(max(1, ba if not pd.isna(ba) else 1))
+    opts = [(k, h) for k, h in LIST_HOURS.items() if k[0] == b and k[1] <= bath] or [(k, h) for k, h in LIST_HOURS.items() if k[0] == b]
+    return opts[-1][1]
+
+def est_hours(row):
+    d = str(row["Extras"])
+    m = re.search(r"(\d+)\s*(?:cleaners?|pp|people|persons?)\s*(\d+(?:\.\d+)?)\s*(?:hr|hrs|hour|hours)", d, re.I)
+    if m:
+        return float(m.group(1)) * float(m.group(2))
+    m = re.search(r"(\d+(?:\.\d+)?)\s*(?:hr|hrs|hour|hours)\s*(\d+)\s*(?:pp|people|persons?|cleaners?)", d, re.I)
+    if m:
+        return float(m.group(1)) * float(m.group(2))
+    return list_hours(row["Bd"], row["Ba"]) * MULT.get(row["service_family"], 1.0)
+
+c["est_hours"] = c.apply(est_hours, axis=1)
+c["week_start_dt"] = c["Date"] - pd.to_timedelta((c["Date"].dt.weekday + 1) % 7, unit="D")
+ops_src = c[c["status"] == "realizado"]
+ops = ops_src.groupby("week_start_dt").agg(
+    services=("ID", "size"),
+    clients=("client_id", "nunique"),
+    est_hours=("est_hours", "sum"),
+    # limpiadoras distintas registradas en la semana (nombres no se exportan, solo el conteo)
+    active_cleaners=("Cleaner", lambda x: x.dropna().astype(str).str.strip().str.lower().nunique()),
+).reset_index().rename(columns={"week_start_dt": "week_start"})
+ops["week_start"] = ops["week_start"].dt.date
+ops["est_hours"] = ops["est_hours"].round(1)
+ops.to_csv(f"{OUT}/weekly_ops.csv", index=False)
+
 # ---------- seed.sql ----------
 def lit(v):
     if v is None or (isinstance(v, float) and pd.isna(v)) or v is pd.NaT:

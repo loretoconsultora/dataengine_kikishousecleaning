@@ -62,3 +62,15 @@ create policy "lectura autenticados" on meta for select to authenticated using (
 
 -- Migración 2026-11-10: nómina semanal
 alter table weekly_marketing add column if not exists labor numeric;
+
+-- Migración 2026-11-10 (2): operación semanal para capacidad
+create table if not exists weekly_ops (
+  week_start      date primary key,
+  services        integer,
+  clients         integer,
+  est_hours       numeric,   -- horas-persona estimadas
+  active_cleaners integer    -- limpiadoras distintas registradas en la semana
+);
+alter table weekly_ops enable row level security;
+drop policy if exists "lectura autenticados" on weekly_ops;
+create policy "lectura autenticados" on weekly_ops for select to authenticated using (true);

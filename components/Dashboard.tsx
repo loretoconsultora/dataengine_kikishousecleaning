@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ALL, WINDOW, applyFilters, type Filters, type Visit, type WeekMarketing } from "@/lib/metrics";
+import { ALL, WINDOW, applyFilters, type Filters, type Visit, type WeekMarketing, type WeekOps } from "@/lib/metrics";
 import { GLOSSARY } from "@/lib/glossary";
 import Resumen from "@/components/sections/Resumen";
 import Retencion from "@/components/sections/Retencion";
 import Monetizacion from "@/components/sections/Monetizacion";
 import Zonas from "@/components/sections/Zonas";
+import Estacionalidad from "@/components/sections/Estacionalidad";
+import Operacion from "@/components/sections/Operacion";
 
 const SECTIONS = [
   { id: "resumen", label: "Resumen", ready: true, desc: "La meta de 100 clientes por semana" },
@@ -14,14 +16,15 @@ const SECTIONS = [
   { id: "retencion", label: "Retención", ready: true, desc: "Quién regresa, quién se va y cuánto vale cada cliente" },
   { id: "monetizacion", label: "Monetización", ready: true, desc: "Ticket, propinas, add-ons y margen por servicio" },
   { id: "zonas", label: "Zonas", ready: true, desc: "Volumen, ticket y margen en las ciudades que atiende Kiki's" },
-  { id: "operacion", label: "Operación y capacidad" },
+  { id: "estacionalidad", label: "Estacionalidad", ready: true, desc: "Temporadas, crecimiento año contra año y semanas atípicas" },
+  { id: "operacion", label: "Operación y capacidad", ready: true, desc: "Equipo, horas y nómina para llegar a la meta" },
   { id: "escenarios", label: "Escenarios" },
   { id: "mercado", label: "Análisis de mercado" },
 ] as { id: string; label: string; ready?: boolean; desc?: string }[];
 
-type Props = { visits: Visit[]; marketing: WeekMarketing[]; cutoff: string; userEmail: string };
+type Props = { visits: Visit[]; marketing: WeekMarketing[]; ops: WeekOps[]; cutoff: string; userEmail: string };
 
-export default function Dashboard({ visits, marketing, cutoff, userEmail }: Props) {
+export default function Dashboard({ visits, marketing, ops, cutoff, userEmail }: Props) {
   const [filters, setFilters] = useState<Filters>({ city: ALL, service: ALL, period: "12w" });
   const [section, setSection] = useState("resumen");
   const [glossaryOpen, setGlossaryOpen] = useState(false);
@@ -83,27 +86,32 @@ export default function Dashboard({ visits, marketing, cutoff, userEmail }: Prop
             </p>
           </div>
           <div className="filters">
-            <label>
-              Ciudad
-              <select value={filters.city} onChange={set("city")}>
-                <option value={ALL}>Todas</option>
-                {cities.map((c) => <option key={c}>{c}</option>)}
-              </select>
-            </label>
-            <label>
-              Tipo de servicio
-              <select value={filters.service} onChange={set("service")}>
-                <option value={ALL}>Todos</option>
-                {services.map((c) => <option key={c}>{c}</option>)}
-              </select>
-            </label>
-            {section !== "retencion" && (
+            {section !== "operacion" && (
+              <>
+                <label>
+                  Ciudad
+                  <select value={filters.city} onChange={set("city")}>
+                    <option value={ALL}>Todas</option>
+                    {cities.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </label>
+                <label>
+                  Tipo de servicio
+                  <select value={filters.service} onChange={set("service")}>
+                    <option value={ALL}>Todos</option>
+                    {services.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </label>
+              </>
+            )}
+            {section !== "retencion" && section !== "operacion" && (
               <div className="seg" role="group" aria-label="Periodo">
                 <button aria-pressed={filters.period === "12w"} onClick={() => setFilters((f) => ({ ...f, period: "12w" }))}>{WINDOW} semanas</button>
                 <button aria-pressed={filters.period === "all"} onClick={() => setFilters((f) => ({ ...f, period: "all" }))}>Histórico</button>
               </div>
             )}
             <button className="btn-ghost" onClick={() => setGlossaryOpen(true)}>Glosario</button>
+            <a className="btn-primary small-btn" href="/reporte" target="_blank" rel="noopener">Descargar reporte</a>
           </div>
         </header>
 
@@ -111,6 +119,8 @@ export default function Dashboard({ visits, marketing, cutoff, userEmail }: Prop
         {section === "retencion" && <Retencion visits={visits} cutoff={cutoff} filters={filters} />}
         {section === "monetizacion" && <Monetizacion filtered={filtered} marketing={marketing} cutoff={cutoff} filters={filters} />}
         {section === "zonas" && <Zonas visits={visits} cutoff={cutoff} filters={filters} />}
+        {section === "estacionalidad" && <Estacionalidad filtered={filtered} marketing={marketing} cutoff={cutoff} filters={filters} />}
+        {section === "operacion" && <Operacion visits={visits} ops={ops} marketing={marketing} cutoff={cutoff} />}
       </main>
 
       {glossaryOpen && (
