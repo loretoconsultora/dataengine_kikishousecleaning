@@ -116,7 +116,11 @@ for col, pat in ADDONS.items():
 c["frequency"] = c["FREQ"].map(FREQ).fillna("Sin dato")
 c["size_bucket"] = c["Bd"].map(size_bucket)
 c["status"] = (c["Date"] < CUTOFF).map({True: "realizado", False: "agendado"})
-c["labor_cost"] = c[["Pay1", "Pay2"]].apply(pd.to_numeric, errors="coerce").fillna(0).sum(axis=1)
+pay = c[["Pay1", "Pay2"]].apply(pd.to_numeric, errors="coerce").fillna(0).sum(axis=1)
+# Desde ~marzo 2026 "Pay1" guarda el pago SEMANAL de cada limpiadora en una sola fila, no el pago por servicio.
+# Solo se conserva como costo por servicio cuando es plausible (mayor a 0 y no más de 1.2× el precio).
+price_num = pd.to_numeric(c["Price"], errors="coerce")
+c["labor_cost"] = pay.where((pay > 0) & (pay <= price_num * 1.2))
 
 done = c[c["status"] == "realizado"]
 first_date = done.groupby("client_id")["Date"].min()
@@ -174,6 +178,7 @@ weekly = pd.DataFrame({
     "year": k["YY"].astype(int), "week": k["WW"].astype(int),
     "marketing_spend": -pd.to_numeric(k["Marketing"], errors="coerce").fillna(0),
     "sales": pd.to_numeric(k["Sales"], errors="coerce"),
+    "labor": -pd.to_numeric(k["Labor"], errors="coerce").fillna(0),
 })
 # semana calendario (domingo a sábado) de cada semana del KPI, tomada de los servicios
 wk_map = visits.groupby(["year", "week"])["week_start"].agg(lambda x: x.mode().iloc[0])

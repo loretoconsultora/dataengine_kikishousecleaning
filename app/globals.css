@@ -184,3 +184,29 @@ input[type="range"] { accent-color: var(--blue); width: 100%; }
   .hero-figure strong { font-size: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---------- secciones v2 ---------- */
+button.nav-item { border: 0; background: none; text-align: left; width: 100%; font: inherit; cursor: pointer; }
+button.nav-item:hover:not(.active) { background: var(--mist); color: var(--ink); }
+.kpi-grid.four { grid-template-columns: repeat(4, 1fr); }
+.cohort { border-collapse: separate; border-spacing: 3px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.cohort th { font-weight: 500; color: var(--ink-3); padding: 4px 6px; text-align: center; white-space: nowrap; }
+.cohort td { padding: 6px 8px; text-align: center; white-space: nowrap; border-radius: 6px; }
+.cohort td:first-child, .cohort th:first-child { text-align: left; }
+.cohort td.heat { min-width: 46px; }
+.goal-table td.down { color: #b42318; font-weight: 500; }
+.goal-table tr.hl td { background: var(--blue-wash); }
+.th-sort { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+.th-sort:hover { color: var(--ink); }
+.bars { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.bars li { display: grid; grid-template-columns: 150px 1fr 52px; gap: 10px; align-items: center; font-size: 13.5px; }
+.bars b { text-align: right; font-variant-numeric: tabular-nums; }
+.mini-progress.wide { width: 100%; margin: 0; }
+@media (max-width: 860px) { .kpi-grid.four { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .kpi-grid.four { grid-template-columns: 1fr; } .bars li { grid-template-columns: 110px 1fr 48px; } }
+@media (max-width: 860px) { button.nav-item { width: auto; flex: none; } }
+.grid-2 > *, .card { min-width: 0; }
+.city-bars { gap: 9px; margin-top: 16px; }
+.city-bars li { grid-template-columns: 120px 1fr 44px; }
+.city-bars .mini-progress { height: 12px; }
+.city-bars li.hl span:first-child { color: var(--blue-deep); font-weight: 600; }

@@ -5,7 +5,7 @@ import type { Visit, WeekMarketing } from "@/lib/metrics";
 export const dynamic = "force-dynamic";
 
 const VISIT_COLS =
-  "visit_id,visit_date,week_start,status,client_id,is_first_visit,client_source,city,region,service_family,frequency,size_bucket,price,tip,total,labor_cost";
+  "visit_id,visit_date,week_start,status,client_id,is_first_visit,client_first_date,client_source,city,region,service_family,frequency,size_bucket,bedrooms,bathrooms,price,tip,total,labor_cost,addon_laundry,addon_baseboards,addon_windows,addon_oven,addon_fridge,addon_cabinets";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -23,7 +23,7 @@ export default async function Home() {
     if (!data || data.length < 1000) break;
   }
 
-  const { data: marketing } = await supabase.from("weekly_marketing").select("week_start,marketing_spend,sales");
+  const { data: marketing } = await supabase.from("weekly_marketing").select("*");
   const { data: meta } = await supabase.from("meta").select("key,value");
   const cutoff = meta?.find((m) => m.key === "data_cutoff")?.value ?? new Date().toISOString().slice(0, 10);
   const { data: { user } } = await supabase.auth.getUser();

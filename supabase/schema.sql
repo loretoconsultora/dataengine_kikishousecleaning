@@ -39,7 +39,8 @@ create table if not exists weekly_marketing (
   week            integer not null,
   marketing_spend numeric,
   sales           numeric,
-  week_start      date primary key
+  week_start      date primary key,
+  labor           numeric                  -- nómina semanal de limpiadoras (hoja KPI)
 );
 
 create table if not exists meta (
@@ -58,3 +59,6 @@ drop policy if exists "lectura autenticados" on meta;
 create policy "lectura autenticados" on visits for select to authenticated using (true);
 create policy "lectura autenticados" on weekly_marketing for select to authenticated using (true);
 create policy "lectura autenticados" on meta for select to authenticated using (true);
+
+-- Migración 2026-11-10: nómina semanal
+alter table weekly_marketing add column if not exists labor numeric;

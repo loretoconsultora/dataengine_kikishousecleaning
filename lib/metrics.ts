@@ -15,9 +15,21 @@ export type Visit = {
   tip: number | null;
   total: number | null;
   labor_cost: number | null;
+  client_first_date: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  addon_laundry: boolean | null;
+  addon_baseboards: boolean | null;
+  addon_windows: boolean | null;
+  addon_oven: boolean | null;
+  addon_fridge: boolean | null;
+  addon_cabinets: boolean | null;
 };
 
-export type WeekMarketing = { week_start: string; marketing_spend: number | null; sales: number | null };
+export type WeekMarketing = { week_start: string; marketing_spend: number | null; sales: number | null; labor?: number | null };
+
+/** Pago por servicio confiable: solo registros donde Pay1 es por servicio (hasta ~marzo 2026). */
+export const hasLabor = (v: Visit) => (v.labor_cost ?? 0) > 0 && (v.price ?? 0) > 0 && v.labor_cost! <= v.price! * 1.2;
 
 export type Filters = { city: string; service: string; period: "12w" | "all" };
 
@@ -117,6 +129,9 @@ export function distribution(visits: Visit[], key: keyof Visit, cutoff: string, 
 export const fmtInt = (n: number) => Math.round(n).toLocaleString("es-MX");
 export const fmt1 = (n: number) => n.toLocaleString("es-MX", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
 export const fmtUsd = (n: number) => "USD " + Math.round(n).toLocaleString("es-MX");
+export const fmtMonth = (m: string) =>
+  new Date(m + "-01T00:00:00Z").toLocaleDateString("es-MX", { month: "short", year: "2-digit", timeZone: "UTC" });
+export const daysBetween = (a: string, b: string) => Math.round((toTime(b) - toTime(a)) / DAY);
 export const fmtPct = (n: number, d = 0) =>
   (n * 100).toLocaleString("es-MX", { maximumFractionDigits: d, minimumFractionDigits: d }) + "%";
 export const fmtWeek = (w: string) =>

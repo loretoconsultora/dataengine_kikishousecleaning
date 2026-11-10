@@ -71,4 +71,43 @@ export const GLOSSARY: { term: string; definition: string; formula?: string }[] 
     term: "Fuente",
     definition: "De dónde llegó el cliente, según su primera visita y el cruce con Thumbtack y Melissa.com. Provisional hasta validar con Kiki's.",
   },
+  {
+    term: "Tasa de recompra",
+    definition: "Porcentaje de clientes que contrataron al menos dos veces.",
+    formula: "Clientes con 2+ servicios ÷ clientes totales",
+  },
+  {
+    term: "Cohorte",
+    definition: "Grupo de clientes que hizo su primer servicio en el mismo mes. Sirve para ver cuántos siguen contratando 1, 2, 3… meses después.",
+  },
+  {
+    term: "Retención al mes k",
+    definition: "Porcentaje de una cohorte que tuvo al menos un servicio k meses después de su primer mes. La curva es el promedio ponderado de todas las cohortes.",
+  },
+  {
+    term: "Estado del cliente",
+    definition: "Activo: servicio en los últimos 60 días o cita agendada. En riesgo: último servicio hace 61 a 120 días. Perdido: más de 120 días (coincide con la etiqueta 120day de GHL).",
+  },
+  {
+    term: "Ingreso por cliente",
+    definition: "Suma de lo cobrado a cada cliente desde febrero 2025, sin propinas. Es valor observado, no proyectado.",
+  },
+  {
+    term: "Concentración del ingreso (Pareto)",
+    definition: "Qué porcentaje del ingreso aporta el grupo de clientes que más compra.",
+  },
+  {
+    term: "Margen de contribución",
+    definition: "Lo que queda de las ventas después de pagar a las limpiadoras. El margen del periodo usa la nómina semanal de la hoja KPI; el margen por tamaño, frecuencia y ciudad usa el pago por servicio registrado de feb 2025 a mar 2026.",
+    formula: "(Ventas − nómina de limpiadoras) ÷ ventas",
+  },
+  {
+    term: "Margen por hora",
+    definition: "Margen de un servicio dividido entre las horas estimadas para ese tamaño de casa en la lista de precios. Si baja en casas grandes, el precio no crece al ritmo del trabajo.",
+    formula: "(Precio − pago a limpiadora) ÷ horas estimadas",
+  },
+  {
+    term: "Densidad por ciudad",
+    definition: "Servicios por semana en una ciudad. Más densidad significa rutas más cortas y más rentables.",
+  },
 ];
