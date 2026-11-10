@@ -74,3 +74,20 @@ create table if not exists weekly_ops (
 alter table weekly_ops enable row level security;
 drop policy if exists "lectura autenticados" on weekly_ops;
 create policy "lectura autenticados" on weekly_ops for select to authenticated using (true);
+
+-- Migración 2026-11-11: embudo mensual de Thumbtack (solo conteos)
+create table if not exists thumbtack_monthly (
+  month           text primary key,  -- YYYY-MM
+  leads           integer,
+  charged         integer,
+  credited        integer,
+  phone           integer,
+  job_standard    integer,
+  job_deep        integer,
+  job_moving      integer,
+  job_office      integer,
+  clients_matched integer            -- clientes nuevos identificados por nombre exacto (mínimo)
+);
+alter table thumbtack_monthly enable row level security;
+drop policy if exists "lectura autenticados" on thumbtack_monthly;
+create policy "lectura autenticados" on thumbtack_monthly for select to authenticated using (true);

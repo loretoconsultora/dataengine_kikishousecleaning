@@ -40,7 +40,7 @@ export default function Retencion({ visits, cutoff, filters }: Props) {
 
   // ---- tiempo entre visitas ----
   const gaps = useMemo(() => gapsByFrequency(visits, ids), [visits, ids]);
-  const gapRows = ["Semanal", "Quincenal", "Mensual", "Única (por validar)"]
+  const gapRows = ["Semanal", "Quincenal", "Mensual", "DND (no contactar)"]
     .filter((f) => gaps.get(f)?.length)
     .map((f) => ({ f, median: median(gaps.get(f)!), n: gaps.get(f)!.length }));
 
@@ -222,7 +222,7 @@ export default function Retencion({ visits, cutoff, filters }: Props) {
           </div>
           <SectionNote>
             Un retraso de pocos días se acumula: un cliente mensual que vuelve cada 32 días en lugar de 28 hace unas 2 visitas menos al año.
-            Los clientes marcados como &quot;única&quot; que aparecen aquí sí volvieron, lo que confirma que esa etiqueta hay que validarla.
+            Los clientes DND que aparecen aquí sí volvieron: DND significa Los clientes marcados como &quot;única&quot; que aparecen aquí sí volvieron, lo que confirma que esa etiqueta hay que validarla.quot;no contactarLos clientes marcados como &quot;única&quot; que aparecen aquí sí volvieron, lo que confirma que esa etiqueta hay que validarla.quot; (fuera de las automatizaciones), no servicio único. Por eso no entran en las listas de reactivación.
           </SectionNote>
         </div>
       </section>

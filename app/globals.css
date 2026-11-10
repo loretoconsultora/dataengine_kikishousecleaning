@@ -266,3 +266,17 @@ a.btn-primary, a.btn-ghost { text-decoration: none; display: inline-block; } a.b
   .range-text { display: none; }
   .range-text-m { display: inline; font-weight: 600; color: var(--ink); }
 }
+
+/* ---------- escenarios ---------- */
+.levers { display: grid; gap: 16px; margin-top: 14px; }
+.lever { display: grid; gap: 6px; }
+.lever-head { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--ink-2); }
+.lever-head b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.lever input[type="range"] { width: 100%; accent-color: var(--blue); }
+.lever small { font-size: 12px; }
+.lever-check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--ink-2); }
+.levers .seg { flex-wrap: wrap; }
+.goal-table td.wrap { white-space: normal; min-width: 220px; color: var(--ink-2); font-size: 13px; }
+.check-yes { color: var(--blue-deep); font-weight: 600; }
+.check-no { color: #b42318; font-weight: 600; }
+.check-mid { color: #a15c07; font-weight: 600; }

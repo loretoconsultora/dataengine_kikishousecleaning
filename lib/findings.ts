@@ -5,6 +5,9 @@ import {
 import { buildClients, clientStatus, cohorts, retentionCurve } from "./clients";
 import { PRICE_LIST, listPrice, listRow } from "./prices";
 import { MARKET, dfwMarketEstimate } from "./market";
+import { acquisitionWeeks, entryQuality, secondVisitPipeline, spendRegression } from "./acquisition";
+import { calibrate, presets, simulate } from "./scenarios";
+import { kikisPatterns } from "./analysis";
 import { atypicalWeeks, capacityPlan, dayOfWeek, monthIndex, opsSummary, seasonSeries, yearOverYear, yoyTotal } from "./analysis";
 
 const DAY = 86_400_000;
@@ -54,17 +57,21 @@ export function computeFindings(visits: Visit[], marketing: WeekMarketing[], ops
   const addonKeys = ["addon_laundry", "addon_baseboards", "addon_windows", "addon_oven", "addon_fridge", "addon_cabinets"] as const;
   const addonPct = recent.length ? recent.filter((v) => addonKeys.some((k) => v[k])).length / recent.length : 0;
   const withLabor = visits.filter((v) => v.status === "realizado" && hasLabor(v) && v.service_family === "Standard");
+  const since120 = t(cutoff) - 120 * DAY;
+  const recentStd = visits.filter((v) => v.status === "realizado" && v.service_family === "Standard" && (v.price ?? 0) > 0 && t(v.visit_date) >= since120);
   const sizes = PRICE_LIST.map((row) => {
     const vs = withLabor.filter((v) => listRow(v.bedrooms, v.bathrooms) === row);
     const price = avg(vs.map((v) => v.price!));
     const lab = avg(vs.map((v) => v.labor_cost!));
-    const list = avg(vs.map((v) => listPrice(row, v.frequency)));
-    return { label: row.label, bd: row.bd, n: vs.length, gap: list ? price / list - 1 : 0, marginHour: vs.length ? (price - lab) / row.hours : 0 };
+    const rs = recentStd.filter((v) => listRow(v.bedrooms, v.bathrooms) === row);
+    const list = avg(rs.map((v) => listPrice(row, v.frequency)));
+    const recent = avg(rs.map((v) => v.price!));
+    return { label: row.label, bd: row.bd, n: vs.length, nRecent: rs.length, gap: list ? recent / list - 1 : 0, marginHour: vs.length ? (price - lab) / row.hours : 0 };
   }).filter((r) => r.n >= 10);
   const small = sizes.find((r) => r.bd === 1);
   const large = sizes.filter((r) => r.bd === 5);
   const largeHour = large.length ? avg(large.map((r) => r.marginHour)) : null;
-  const gaps = sizes.map((r) => r.gap);
+  const gaps = sizes.filter((r) => r.nRecent >= 5).map((r) => r.gap);
 
   // ---- zonas ----
   const cityDist = distribution(visits, "city", cutoff, "12w");
@@ -96,8 +103,29 @@ export function computeFindings(visits: Visit[], marketing: WeekMarketing[], ops
   const yearRevenue = visits.filter((v) => v.status === "realizado" && t(v.week_start) >= yearFrom && t(v.week_start) < end).reduce((a, v) => a + (v.price ?? 0), 0);
   const market = { total: est.total, yearRevenue, share: est.total ? yearRevenue / est.total : 0, googleCac35: MARKET.googleCpl / 0.35, googleCac20: MARKET.googleCpl / 0.2 };
 
+  // ---- adquisición ----
+  const reg = spendRegression(acquisitionWeeks(visits, marketing, cutoff).filter((w) => w.week >= "2025-03-02"));
+  const q = entryQuality(visits, cutoff);
+  const pipe = secondVisitPipeline(visits, cutoff);
+  const acq = {
+    perHundred: reg ? reg.b * 100 : null, r2: reg?.r2 ?? null, marginalCac: reg?.marginalCac ?? null,
+    stdConv: q.rows.find((r) => r.family === "Standard")?.conv90 ?? null,
+    moConv: q.rows.find((r) => r.family === "Move Out")?.conv90 ?? null,
+    conv: q.conv90, pool: pipe.pool, poolMoveOut: pipe.poolMoveOut,
+  };
+
+  // ---- escenarios ----
+  const cal = calibrate(visits, marketing, cutoff);
+  const horizon = Math.ceil((t("2027-12-31") - t(cal.start)) / (7 * DAY));
+  const sc = presets(cal).map((p) => {
+    const sim = simulate(cal, p.levers, horizon, goal, op.hoursPerClient || 4.5, op.hoursPerCleaner || 30);
+    const dec = sim.rows.filter((r) => r.week.startsWith("2027-12"));
+    return { label: p.label, desc: p.desc, reached: sim.reached, steady: sim.steady, dec: dec.length ? dec.reduce((a, r) => a + r.clients, 0) / dec.length : null };
+  });
+  const patterns = kikisPatterns(visits, cutoff, series).filter((p) => p.verdict === "Se confirma" || p.verdict === "No se confirma");
+
   return {
-    goal, cutoff, market,
+    goal, cutoff, market, acq, scenarios: { rows: sc, churn: cal.churn, secondVisit: cal.secondVisit }, patterns,
     start: { clients, nuevos, recurrentes, shareNew, goalNew, goalRec, spend, cac, cacTarget, roas },
     retention: {
       totalClients: all.length, repeatRate: all.length ? repeaters.length / all.length : 0, oneTime, oneTimePct: all.length ? oneTime / all.length : 0,

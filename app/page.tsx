@@ -9,7 +9,7 @@ export default async function Home() {
   if (!d.visits.length) {
     return <EmptyState message="La base de datos todavía no tiene información. Carga los datos en Supabase para ver el tablero." />;
   }
-  return <Dashboard visits={d.visits} marketing={d.marketing} ops={d.ops} cutoff={d.cutoff} userEmail={d.userEmail} />;
+  return <Dashboard visits={d.visits} marketing={d.marketing} ops={d.ops} thumbtack={d.thumbtack} cutoff={d.cutoff} userEmail={d.userEmail} />;
 }
 
 function EmptyState({ message }: { message: string }) {

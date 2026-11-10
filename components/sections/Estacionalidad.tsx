@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fmt1, fmtInt, fmtPct, fmtUsd, fmtWeek, type Filters, type Visit, type WeekMarketing } from "@/lib/metrics";
-import { atypicalWeeks, dayOfWeek, monthIndex, seasonSeries, yearOverYear, yoyTotal } from "@/lib/analysis";
+import { atypicalWeeks, dayOfWeek, kikisPatterns, monthIndex, seasonSeries, yearOverYear, yoyTotal } from "@/lib/analysis";
 import { AXIS, SectionNote, Stat, tooltipStyle } from "@/components/ui";
 
 type Props = { filtered: Visit[]; marketing: WeekMarketing[]; cutoff: string; filters: Filters };
@@ -14,6 +14,7 @@ export default function Estacionalidad({ filtered, marketing, cutoff, filters }:
   const yoy = useMemo(() => yearOverYear(series), [series]);
   const dow = useMemo(() => dayOfWeek(filtered, cutoff, filters.period), [filtered, cutoff, filters.period]);
   const odd = useMemo(() => atypicalWeeks(series), [series]);
+  const patterns = useMemo(() => kikisPatterns(filtered, cutoff, series), [filtered, cutoff, series]);
 
   const valid = months.filter((m) => m.index !== null);
   const best = [...valid].sort((a, b) => b.index! - a.index!)[0];
@@ -104,7 +105,7 @@ export default function Estacionalidad({ filtered, marketing, cutoff, filters }:
         </div>
         <div className="card">
           <h2>Semanas atípicas</h2>
-          <p className="muted small">Semanas con ±25% contra el promedio de sus 4 semanas previas. Candidatas a validar con Oscar (clima, festivos u otros eventos).</p>
+          <p className="muted small">Semanas con ±25% contra el promedio de sus 4 semanas previas. Kiki&apos;s las explica con los patrones de temporada de abajo; las de Thanksgiving y fin de año son festivos.</p>
           <div className="table-wrap">
             <table className="goal-table">
               <thead><tr><th>Semana</th><th>Clientes</th><th>Promedio previo</th><th>Variación</th></tr></thead>
@@ -118,8 +119,31 @@ export default function Estacionalidad({ filtered, marketing, cutoff, filters }:
               </tbody>
             </table>
           </div>
-          <SectionNote>{odd.length} semanas atípicas en total; se muestran las 12 más recientes. Al confirmarlas, el modelo de proyección las trata como eventos y no como tendencia.</SectionNote>
+          <SectionNote>{odd.length} semanas atípicas en total{odd.length > 12 ? "; se muestran las 12 más recientes" : ""}.</SectionNote>
         </div>
+      </section>
+
+      <section className="card">
+        <h2>Lo que observa Kiki&apos;s contra lo que dicen los datos</h2>
+        <p className="muted small">Patrones de temporada que reportó el equipo, medidos con los servicios realizados (meses completos). &quot;Diferencia&quot; compara el periodo señalado contra el resto del año o del mes.</p>
+        <div className="table-wrap">
+          <table className="goal-table">
+            <thead><tr><th>Lo que observa Kiki&apos;s</th><th>Cómo se mide</th><th>Diferencia</th><th>Resultado</th></tr></thead>
+            <tbody>
+              {patterns.map((p) => (
+                <tr key={p.claim}>
+                  <td className="wrap">{p.claim}</td>
+                  <td className="wrap">{p.metric}</td>
+                  <td>{p.lift === null ? "–" : Math.round(p.lift * 100) === 0 ? "0%" : `${p.lift > 0 ? "+" : ""}${fmtPct(p.lift)}`}</td>
+                  <td className={p.verdict === "Se confirma" ? "check-yes" : p.verdict === "No se confirma" ? "check-no" : "check-mid"}>{p.verdict}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <SectionNote>
+          Con menos de dos años de historia, un patrón que no se confirma no significa que no exista: puede que todavía no haya suficientes datos. Lo que sí se confirma ya puede usarse para planear personal y campañas. Diferencias menores a ±10% se marcan como &quot;sin diferencia clara&quot;.
+        </SectionNote>
       </section>
     </>
   );

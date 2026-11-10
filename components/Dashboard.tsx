@@ -10,22 +10,25 @@ import Zonas from "@/components/sections/Zonas";
 import Estacionalidad from "@/components/sections/Estacionalidad";
 import Operacion from "@/components/sections/Operacion";
 import Mercado from "@/components/sections/Mercado";
+import Adquisicion from "@/components/sections/Adquisicion";
+import Escenarios from "@/components/sections/Escenarios";
+import type { ThumbtackMonth } from "@/lib/acquisition";
 
 const SECTIONS = [
   { id: "resumen", label: "Resumen", ready: true, desc: "La meta de 100 clientes por semana" },
-  { id: "adquisicion", label: "Adquisición" },
+  { id: "adquisicion", label: "Adquisición", ready: true, desc: "Costo de conseguir clientes, qué los trae y cuáles se quedan" },
   { id: "retencion", label: "Retención", ready: true, desc: "Quién regresa, quién se va y cuánto vale cada cliente" },
   { id: "monetizacion", label: "Monetización", ready: true, desc: "Ticket, propinas, add-ons y margen por servicio" },
   { id: "zonas", label: "Zonas", ready: true, desc: "Volumen, ticket y margen en las ciudades que atiende Kiki's" },
   { id: "estacionalidad", label: "Estacionalidad", ready: true, desc: "Temporadas, crecimiento año contra año y semanas atípicas" },
   { id: "operacion", label: "Operación y capacidad", ready: true, desc: "Equipo, horas y nómina para llegar a la meta" },
-  { id: "escenarios", label: "Escenarios" },
+  { id: "escenarios", label: "Escenarios", ready: true, desc: "Qué decisiones llevan a 100 clientes por semana y cuándo" },
   { id: "mercado", label: "Análisis de mercado", ready: true, desc: "El mercado de limpieza en Dallas-Fort Worth y dónde está Kiki's" },
 ] as { id: string; label: string; ready?: boolean; desc?: string }[];
 
-type Props = { visits: Visit[]; marketing: WeekMarketing[]; ops: WeekOps[]; cutoff: string; userEmail: string };
+type Props = { visits: Visit[]; marketing: WeekMarketing[]; ops: WeekOps[]; thumbtack?: ThumbtackMonth[]; cutoff: string; userEmail: string };
 
-export default function Dashboard({ visits, marketing, ops, cutoff, userEmail }: Props) {
+export default function Dashboard({ visits, marketing, ops, thumbtack = [], cutoff, userEmail }: Props) {
   const [filters, setFilters] = useState<Filters>({ city: ALL, service: ALL, period: "12w" });
   const [section, setSection] = useState("resumen");
   const [glossaryOpen, setGlossaryOpen] = useState(false);
@@ -87,7 +90,7 @@ export default function Dashboard({ visits, marketing, ops, cutoff, userEmail }:
             </p>
           </div>
           <div className="filters">
-            {section !== "operacion" && section !== "mercado" && (
+            {section !== "operacion" && section !== "mercado" && section !== "escenarios" && (
               <>
                 <label>
                   Ciudad
@@ -105,7 +108,7 @@ export default function Dashboard({ visits, marketing, ops, cutoff, userEmail }:
                 </label>
               </>
             )}
-            {section !== "retencion" && section !== "operacion" && section !== "mercado" && (
+            {section !== "retencion" && section !== "operacion" && section !== "mercado" && section !== "escenarios" && (
               <div className="seg" role="group" aria-label="Periodo">
                 <button aria-pressed={filters.period === "12w"} onClick={() => setFilters((f) => ({ ...f, period: "12w" }))}>{WINDOW} semanas</button>
                 <button aria-pressed={filters.period === "all"} onClick={() => setFilters((f) => ({ ...f, period: "all" }))}>Histórico</button>
@@ -122,6 +125,8 @@ export default function Dashboard({ visits, marketing, ops, cutoff, userEmail }:
         {section === "zonas" && <Zonas visits={visits} cutoff={cutoff} filters={filters} />}
         {section === "estacionalidad" && <Estacionalidad filtered={filtered} marketing={marketing} cutoff={cutoff} filters={filters} />}
         {section === "operacion" && <Operacion visits={visits} ops={ops} marketing={marketing} cutoff={cutoff} />}
+        {section === "adquisicion" && <Adquisicion visits={visits} filtered={filtered} marketing={marketing} thumbtack={thumbtack} cutoff={cutoff} filters={filters} />}
+        {section === "escenarios" && <Escenarios visits={visits} marketing={marketing} ops={ops} cutoff={cutoff} />}
         {section === "mercado" && <Mercado visits={visits} marketing={marketing} cutoff={cutoff} />}
       </main>
 

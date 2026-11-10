@@ -44,11 +44,16 @@ def parse_city(addr):
             return CANON.get(name.lower(), name.title())
     return None
 
-# ---------- tipo de servicio (PROVISIONAL, ver doc de consultas, preguntas 1-4) ----------
+# ---------- tipo de servicio (validado con Kiki's, doc de consultas v2, preguntas 1-4) ----------
+# Se ofrecen Standard, Deep Clean, Move In y Move Out. Una casa parcial (solo planta baja) se vende por horas.
+# Comercial, Post Construction y Airbnb son "call for quote". Move In se separa de Deep Clean aunque tenga el mismo precio.
+PARTIAL = r"downstairs only|skip upstairs|(1st|first) floor only|upstairs only"
 def service_family(desc):
     d = str(desc).lower()
     if d in ("nan", ""):
         return "Sin descripción"
+    if re.search(r"post[ -]?(construction|remodel)", d):
+        return "Post Construction"
     if "commercial" in d or "office" in d:
         return "Comercial"
     if "airbnb" in d:
@@ -61,6 +66,8 @@ def service_family(desc):
         return "Deep Clean"
     if re.search(r"organiz|\borg\b", d):
         return "Organizing"
+    if re.search(PARTIAL, d) and "deep" not in d:
+        return "Por horas"
     if re.search(r"\d+\s*(hr|hrs|hour|hours)\b|cleaners?\s+\d|\bpp\b|people|person|hourly", d):
         return "Por horas"
     if "standard" in d or "eco" in d or "regular" in d:
@@ -76,7 +83,7 @@ ADDONS = {
     "addon_cabinets": r"cabinet",
 }
 
-FREQ = {"W": "Semanal", "Bi-W": "Quincenal", "M": "Mensual", "DND": "Única (por validar)"}
+FREQ = {"W": "Semanal", "Bi-W": "Quincenal", "M": "Mensual", "DND": "DND (no contactar)"}
 
 def size_bucket(bd):
     bd = pd.to_numeric(bd, errors="coerce")
@@ -127,9 +134,10 @@ first_date = done.groupby("client_id")["Date"].min()
 c["client_first_date"] = c["client_id"].map(first_date)
 c["is_first_visit"] = (c["status"] == "realizado") & (c["Date"] == c["client_first_date"])
 
-# fuente del cliente: valor de "Cold Call" en su primera visita (PROVISIONAL, pregunta 6)
+# fuente del cliente. "Cold Call" NO es fuente: LEAD = cliente que no ha repetido, CALL = cliente que solo necesita agendar
+# (respuesta de Kiki's, pregunta 6). La fuente solo se identifica cruzando con Thumbtack y Melissa.com.
 fv = c[c["is_first_visit"]].drop_duplicates("client_id")
-src = fv.set_index("client_id")["Cold Call"].map({"LEAD": "Lead", "CALL": "Call"}).fillna("Sin fuente identificada")
+src = pd.Series("Sin fuente identificada", index=fv["client_id"].values)
 # cruce con Thumbtack (nombre exacto) y Melissa.com (teléfono)
 tt = pd.read_excel(XLSX, sheet_name="leads-inbox (2)")
 tt_names = set(tt["Customer"].dropna().astype(str).str.strip().str.lower())
@@ -228,6 +236,26 @@ ops["week_start"] = ops["week_start"].dt.date
 ops["est_hours"] = ops["est_hours"].round(1)
 ops.to_csv(f"{OUT}/weekly_ops.csv", index=False)
 
+# ---------- Thumbtack: embudo mensual (solo conteos, sin nombres) ----------
+tt["month"] = pd.to_datetime(tt["Lead received"], errors="coerce").dt.to_period("M").astype(str)
+job = tt["Job type"].astype(str).str.lower()
+tt_m = pd.DataFrame({
+    "month": tt["month"],
+    "leads": 1,
+    "charged": (tt["Charge status"] == "Charged").astype(int),
+    "credited": (tt["Charge status"] == "Credited").astype(int),
+    "phone": (tt["Lead type"] == "Phone call").astype(int),
+    "job_standard": job.str.contains("standard").astype(int),
+    "job_deep": job.str.contains("deep").astype(int),
+    "job_moving": job.str.contains("moving").astype(int),
+    "job_office": job.str.contains("office").astype(int),
+}).groupby("month").sum().reset_index()
+tt_clients = fv[fv["client_id"].map(src) == "Thumbtack"].copy()
+tt_clients["month"] = tt_clients["Date"].dt.to_period("M").astype(str)
+tt_m["clients_matched"] = tt_m["month"].map(tt_clients.groupby("month").size()).fillna(0).astype(int)
+tt_m = tt_m[tt_m["month"] != "NaT"]
+tt_m.to_csv(f"{OUT}/thumbtack_monthly.csv", index=False)
+
 # ---------- seed.sql ----------
 def lit(v):
     if v is None or (isinstance(v, float) and pd.isna(v)) or v is pd.NaT:
@@ -257,5 +285,6 @@ print("clientes", visits.client_id.nunique())
 print("familias", visits.service_family.value_counts().to_dict())
 print("frecuencia", visits.frequency.value_counts().to_dict())
 print("fuente (clientes)", visits.drop_duplicates("client_id").client_source.value_counts().to_dict())
+print("thumbtack", tt_m[["leads","charged","clients_matched"]].sum().to_dict())
 print("sin ciudad", (visits.city == "Sin ciudad").sum(), "| ciudades", visits.city.nunique())
 print("top ciudades", visits.city.value_counts().head(12).to_dict())

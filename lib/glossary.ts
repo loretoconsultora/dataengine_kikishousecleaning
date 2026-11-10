@@ -65,7 +65,7 @@ export const GLOSSARY: { term: string; definition: string; formula?: string }[] 
   },
   {
     term: "Frecuencia",
-    definition: "Semanal, quincenal, mensual o única, según la columna FREQ. \"Única\" (DND en el Excel) está por validar.",
+    definition: "Semanal, quincenal o mensual, según la columna FREQ. DND significa \"no contactar\": el cliente queda fuera de las automatizaciones (por ejemplo, porque fue problemático, se mudó o es familiar de los dueños); no indica la frecuencia.",
   },
   {
     term: "Fuente",
@@ -156,5 +156,28 @@ export const GLOSSARY: { term: string; definition: string; formula?: string }[] 
     term: "Costo por lead (CPL)",
     definition: "Lo que cuesta en publicidad conseguir un contacto interesado. El costo por cliente depende de cuántos de esos leads se cierran.",
     formula: "Costo por cliente = CPL ÷ tasa de cierre",
+  },
+  {
+    term: "Costo de un cliente extra (CAC marginal)",
+    definition: "Lo que cuesta en pauta conseguir un cliente nuevo adicional, según la regresión de clientes nuevos sobre la pauta semanal. Si es mayor que el CAC promedio, subir la pauta encarece cada cliente.",
+    formula: "1 ÷ (clientes nuevos extra por cada dólar de pauta)",
+  },
+  {
+    term: "Servicios para recuperar el CAC",
+    definition: "Cuántos servicios necesita un cliente nuevo para que su margen pague lo que costó conseguirlo.",
+    formula: "CAC ÷ (ticket del primer servicio × margen de contribución)",
+  },
+  {
+    term: "Bolsa de segunda visita",
+    definition: "Lo que Kiki's marca como LEAD: clientes de los últimos 90 días con una sola visita, sin servicio agendado y sin marca DND.",
+  },
+  {
+    term: "Base recurrente",
+    definition: "Clientes con 2 o más visitas cuya última visita fue hace 60 días o menos. Es la base que usa el modelo de escenarios.",
+  },
+  {
+    term: "Bajas por semana",
+    definition: "Fracción de la base recurrente que deja de venir cada semana, calibrada con las últimas 26 semanas.",
+    formula: "(base inicial + nuevos recurrentes − base final) ÷ base inicial",
   },
 ];

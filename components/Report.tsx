@@ -5,6 +5,7 @@ import { fmt1, fmtInt, fmtPct, fmtUsd } from "@/lib/metrics";
 import type { Findings } from "@/lib/findings";
 
 const longDate = (d: Date) => d.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
+const signed = (v: number) => `${v > 0 ? "+" : ""}${fmtPct(v)}`;
 const pct = (v: number | null | undefined, d = 0) => (v === null || v === undefined ? "–" : fmtPct(v, d));
 
 export default function Report({ f }: { f: Findings }) {
@@ -48,6 +49,17 @@ export default function Report({ f }: { f: Findings }) {
       </section>
 
       <section className="report-sec">
+        <h2>Adquisición</h2>
+        <ul>
+          {f.acq.perHundred !== null && <li>Cada USD 100 extra de pauta trae unos <b>{fmt1(f.acq.perHundred)} clientes nuevos</b> por semana: un cliente extra cuesta cerca de <b>{fmtUsd(f.acq.marginalCac ?? 0)}</b>, más que el CAC promedio. La pauta explica el {pct(f.acq.r2)} de la variación semanal; el resto depende de temporada, referidos y cierre.</li>}
+          {f.acq.stdConv !== null && f.acq.moConv !== null && <li>Un cliente que entra con Standard regresa en 90 días en el <b>{pct(f.acq.stdConv)}</b> de los casos; uno de Move Out, en el <b>{pct(f.acq.moConv)}</b>. En promedio regresa el {pct(f.acq.conv)}.</li>}
+          <li>Hay <b>{fmtInt(f.acq.pool)} clientes</b> de los últimos 90 días con una sola visita y sin servicio agendado ({fmtInt(f.acq.poolMoveOut)} son Move Out): es la bolsa de segunda visita.</li>
+          <li>La columna &quot;Cold Call&quot; no registra la fuente del cliente, así que el CAC por canal se activa cuando se registre la fuente en GHL y el gasto por canal.</li>
+        </ul>
+        <p className="report-take"><b>Para la meta:</b> más pauta sola encarece cada cliente. El margen está en cerrar mejor los leads y en convertir la primera visita en la segunda.</p>
+      </section>
+
+      <section className="report-sec">
         <h2>Retención: el hallazgo más fuerte</h2>
         <ul>
           <li>Solo el <b>{pct(r.repeatRate)}</b> de los clientes regresa alguna vez. El {pct(r.oneTimePct)} ({fmtInt(r.oneTime)} clientes) contrató una sola vez.</li>
@@ -65,7 +77,7 @@ export default function Report({ f }: { f: Findings }) {
             <li>El margen por hora baja conforme crece la casa: <b>{fmtUsd(m.smallHour)}/h</b> en 1 recámara contra <b>{fmtUsd(m.largeHour)}/h</b> en 5 recámaras.</li>
           )}
           {m.gapMin !== null && m.gapMax !== null && (
-            <li>Lo cobrado está entre <b>{pct(Math.abs(m.gapMax))} y {pct(Math.abs(m.gapMin))}</b> por debajo de la lista vigente, y la brecha es mayor en las casas grandes.</li>
+            <li>En los últimos 120 días, lo cobrado en Standard va de <b>{signed(m.gapMin)} a {signed(m.gapMax)}</b> contra la lista vigente, según el tamaño de la casa. Kiki&apos;s sube precios de forma gradual, así que los clientes antiguos suelen pagar tarifas anteriores.</li>
           )}
           <li>El margen de contribución de las últimas 12 semanas es del <b>{pct(m.marginPct)}</b>. El ticket promedio es de {fmtUsd(m.ticket)} y la propina de {fmtUsd(m.tip)} ({pct(m.tipPct, 1)}).</li>
           <li>Los add-ons casi no aparecen: solo el <b>{pct(m.addonPct)}</b> de los servicios menciona alguno. Hay espacio para venderlos.</li>
@@ -88,7 +100,8 @@ export default function Report({ f }: { f: Findings }) {
           {se.yoyAvg !== null && <li>Año contra año, los clientes por semana crecieron en promedio <b>{se.yoyAvg >= 0 ? "+" : ""}{pct(se.yoyAvg)}</b> (meses comparables: {se.yoyMonths}).</li>}
           {se.best && se.worst && <li>El mes más fuerte es <b>{se.best.label}</b> ({pct(se.best.index! - 1)} sobre el promedio) y el más débil <b>{se.worst.label}</b> ({pct(se.worst.index! - 1)}).</li>}
           {se.peak && <li>El día con más servicios es el <b>{se.peak.day.toLowerCase()}</b> ({pct(se.peak.pct)} de la semana).</li>}
-          <li>Hay <b>{fmtInt(se.oddWeeks)}</b> semanas atípicas (±25% contra las 4 previas) por validar con Oscar (clima, festivos u otros eventos).</li>
+          <li>Hay <b>{fmtInt(se.oddWeeks)}</b> semanas atípicas (±25% contra las 4 previas); las de Thanksgiving y fin de año son festivos.</li>
+          {f.patterns.map((p) => <li key={p.claim}>{p.claim}: <b>{p.verdict.toLowerCase()}</b> ({p.lift! > 0 ? "+" : ""}{pct(p.lift)}).</li>)}
         </ul>
       </section>
 
@@ -105,6 +118,17 @@ export default function Report({ f }: { f: Findings }) {
       )}
 
       <section className="report-sec">
+        <h2>Escenarios a diciembre 2027</h2>
+        <ul>
+          {f.scenarios.rows.map((r) => (
+            <li key={r.label}><b>{r.label}</b> ({r.desc.charAt(0).toLowerCase() + r.desc.slice(1)}): {fmt1(r.dec ?? 0)} clientes por semana en diciembre 2027{r.reached ? `; llega a ${f.goal} en ${monthEs(r.reached)}` : `; no llega a ${f.goal} en el horizonte`}.</li>
+          ))}
+          <li>Hoy se va el {pct(f.scenarios.churn, 1)} de la base recurrente cada semana y por cada 10 clientes nuevos llegan unas {fmt1(f.scenarios.secondVisit * 10)} segundas visitas (incluye regresos después de 90 días): son las dos palancas que más mueven la proyección.</li>
+        </ul>
+        <p className="report-take"><b>Para la meta:</b> {f.scenarios.rows[2]?.reached ? `los ${f.goal} clientes por semana son alcanzables en 2027 con el sistema de adquisición y retención` : `ni siquiera el escenario del sistema llega a ${f.goal} en 2027 con estos supuestos`}{f.scenarios.rows[1]?.reached ? "." : "; con solo más pauta, no."}</p>
+      </section>
+
+      <section className="report-sec">
         <h2>Mercado</h2>
         <ul>
           <li>El mercado de limpieza residencial en Dallas-Fort Worth vale unos <b>{fmtUsd(f.market.total / 1e6)} millones al año</b> (estimación propia: 3.0 millones de hogares × 16% que contrata × gasto promedio nacional). Kiki&apos;s facturó {fmtUsd(f.market.yearRevenue)} en servicios en las últimas 52 semanas: una participación de <b>{pct(f.market.share, 2)}</b>.</li>
@@ -119,7 +143,7 @@ export default function Report({ f }: { f: Findings }) {
         <h2>Pendientes de validación</h2>
         <ul>
           <li>El <b>{pct(f.quality.noSource)}</b> de los clientes no tiene una fuente identificable. Sin ese dato no se puede calcular el CAC por fuente (Google, Thumbtack, networking, Melissa.com).</li>
-          <li>Familias de servicio, frecuencia "única" (DND) y columna de pago son clasificaciones provisionales, en espera de las respuestas del documento de consultas.</li>
+          <li>No existe registro de cancelaciones y reagendas. Empieza a registrarse a partir de esta semana para medir la tasa de cancelación.</li>
           <li>El margen por tamaño de casa usa el pago por servicio registrado de febrero 2025 a marzo 2026; después, el Excel registra la nómina semanal.</li>
         </ul>
       </section>
@@ -127,6 +151,11 @@ export default function Report({ f }: { f: Findings }) {
       <footer className="report-foot">Data Engine · Kiki&apos;s House Cleaning · Victoranza Agency × Loreto Consultora · Confidencial</footer>
     </div>
   );
+}
+
+const MONTHS_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+function monthEs(d: string) {
+  return `${MONTHS_ES[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}`;
 }
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub: string }) {

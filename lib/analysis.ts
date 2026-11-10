@@ -158,3 +158,68 @@ export function recurringByCity(visits: Visit[], cutoff: string, period: "12w" |
     .sort((a, b) => b.recurring - a.recurring);
   return { top: rows.slice(0, 5), bottom: rows.slice(-5).reverse(), max: rows[0]?.recurring ?? 0, minServices };
 }
+
+/**
+ * Patrones de temporada que reporta Kiki's (doc de consultas v2, pregunta 11), contrastados con los datos.
+ * Se usan meses completos (sin el mes de arranque ni el mes en curso).
+ * Cada patrón devuelve un "lift": cuánto más (o menos) ocurre en el periodo señalado contra el resto.
+ */
+export function kikisPatterns(visits: Visit[], cutoff: string, series: SeasonWeek[]) {
+  const done = visits.filter((v) => v.status === "realizado").sort((a, b) => a.visit_date.localeCompare(b.visit_date));
+  if (!done.length) return [];
+  const launch = done[0].visit_date.slice(0, 7);
+  const current = cutoff.slice(0, 7);
+  const full = done.filter((v) => v.visit_date.slice(0, 7) !== launch && v.visit_date.slice(0, 7) !== current);
+  const day = (v: Visit) => Number(v.visit_date.slice(8, 10));
+  const month = (v: Visit) => Number(v.visit_date.slice(5, 7));
+  const perDay = (vs: Visit[], lo: number, hi: number) => {
+    const n = vs.filter((v) => day(v) >= lo && day(v) <= hi).length;
+    return n / ((hi === 31 ? 30.44 : hi) - lo + 1);
+  };
+  const share = (vs: Visit[], fam: string, months: number[]) => {
+    const inM = vs.filter((v) => months.includes(month(v)));
+    const outM = vs.filter((v) => !months.includes(month(v)));
+    const a = inM.length ? inM.filter((v) => v.service_family === fam).length / inM.length : 0;
+    const b = outM.length ? outM.filter((v) => v.service_family === fam).length / outM.length : 0;
+    return b ? a / b - 1 : null;
+  };
+  const allDays = full.length / 30.44;
+  const firstWeek = allDays ? perDay(full, 1, 7) / allDays - 1 : null;
+  const lastWeek = allDays ? perDay(full, 22, 31) / allDays - 1 : null;
+  const mo = full.filter((v) => v.service_family === "Move Out");
+  const moDays = mo.length / 30.44;
+  const moLast = moDays ? perDay(mo, 22, 31) / moDays - 1 : null;
+
+  const idx = monthIndex(series);
+  const idxAvg = (ms: number[]) => {
+    const xs = ms.map((m) => idx[m - 1]?.index).filter((x): x is number => x !== null && x !== undefined);
+    return xs.length ? avg(xs) - 1 : null;
+  };
+  // segundas visitas (cliente que empieza a ser recurrente) por mes del año
+  const seen = new Map<string, number>();
+  const second: number[] = Array(12).fill(0);
+  for (const v of full) {
+    const k = (seen.get(v.client_id) ?? 0) + 1;
+    seen.set(v.client_id, k);
+    if (k === 2) second[month(v) - 1]++;
+  }
+  const monthsCount = Array(12).fill(0);
+  new Set(full.map((v) => v.visit_date.slice(0, 7))).forEach((ym) => monthsCount[Number(ym.slice(5, 7)) - 1]++);
+  const secondPerMonth = second.map((n, i) => (monthsCount[i] ? n / monthsCount[i] : null));
+  const validSecond = secondPerMonth.filter((x): x is number => x !== null);
+  const sept = secondPerMonth[8];
+  const septLift = sept !== null && validSecond.length ? sept / avg(validSecond) - 1 : null;
+
+  return [
+    { claim: "Temporada baja en vacaciones escolares (junio, julio y diciembre)", metric: "Índice de clientes por semana", lift: idxAvg([6, 7, 12]), expect: -1 },
+    { claim: "Temporada baja en la primera semana del mes", metric: "Servicios por día, días 1 a 7", lift: firstWeek, expect: -1 },
+    { claim: "Temporada alta en la última semana del mes", metric: "Servicios por día, día 22 a fin de mes", lift: lastWeek, expect: 1 },
+    { claim: "Los Move Outs se concentran en la última semana del mes", metric: "Move Outs por día, día 22 a fin de mes", lift: moLast, expect: 1 },
+    { claim: "Los Move Outs suben de mayo a julio", metric: "Peso de Move Out en los servicios", lift: share(full, "Move Out", [5, 6, 7]), expect: 1 },
+    { claim: "Los Deep Cleans suben en agosto, noviembre y diciembre", metric: "Peso de Deep Clean en los servicios", lift: share(full, "Deep Clean", [8, 11, 12]), expect: 1 },
+    { claim: "En septiembre (regreso a clases) entran clientes frecuentes", metric: "Clientes que hacen su segunda visita", lift: septLift, expect: 1 },
+  ].map((p) => ({
+    ...p,
+    verdict: p.lift === null ? "Sin datos" : Math.abs(p.lift) < 0.1 ? "Sin diferencia clara" : Math.sign(p.lift) === p.expect ? "Se confirma" : "No se confirma",
+  }));
+}

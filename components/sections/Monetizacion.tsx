@@ -21,6 +21,7 @@ const ADDONS: { key: keyof Visit; label: string }[] = [
 
 const DAY = 86_400_000;
 // Visitas por mes según la frecuencia contratada (52 semanas ÷ 12 meses).
+const RECENT_DAYS = 120;
 const VISITS_PER_MONTH: Record<string, number> = { Semanal: 4.33, Quincenal: 2.17, Mensual: 1 };
 
 export default function Monetizacion({ filtered, marketing, cutoff, filters }: Props) {
@@ -70,23 +71,33 @@ export default function Monetizacion({ filtered, marketing, cutoff, filters }: P
     }));
   }, [priced]);
 
+  // Kiki's sube precios gradualmente; la lista vigente tiene ~90-180 días. Lo comparable con la lista es lo cobrado reciente.
+  const recentStd = useMemo(() => {
+    const since = new Date(cutoff + "T00:00:00Z").getTime() - RECENT_DAYS * DAY;
+    return filtered.filter((v) => v.status === "realizado" && v.service_family === "Standard" && (v.price ?? 0) > 0 && new Date(v.visit_date + "T00:00:00Z").getTime() >= since);
+  }, [filtered, cutoff]);
+
   // ---- precio y margen por tamaño de casa (Standard) ----
   const bySize = useMemo(() => {
     return PRICE_LIST.map((row) => {
+      const rs = recentStd.filter((v) => listRow(v.bedrooms, v.bathrooms) === row);
+      const recent = avg(rs.map((v) => v.price!));
+      const recentList = avg(rs.map((v) => listPrice(row, v.frequency)));
       const vs = withLabor.filter((v) => v.service_family === "Standard" && listRow(v.bedrooms, v.bathrooms) === row);
       const price = avg(vs.map((v) => v.price!));
       const labor = avg(vs.map((v) => v.labor_cost!));
       const list = avg(vs.map((v) => listPrice(row, v.frequency)));
       return {
-        label: row.label, hours: row.hours, n: vs.length, price, labor, list,
-        gap: list ? price / list - 1 : 0,
+        label: row.label, hours: row.hours, n: vs.length, price, labor, list: rs.length ? recentList : list,
+        nRecent: rs.length, recent,
+        gap: rs.length && recentList ? recent / recentList - 1 : null,
         marginHour: vs.length ? (price - labor) / row.hours : 0,
         marginPct: price ? (price - labor) / price : 0,
       };
     });
-  }, [withLabor]);
+  }, [withLabor, recentStd]);
   const chartSize = bySize.filter((r) => r.n >= 3).map((r) => ({
-    label: r.label.replace(" / ", "/"), "Precio real": Math.round(r.price), "Precio de lista": Math.round(r.list),
+    label: r.label.replace(" / ", "/"), "Precio real": Math.round(r.price), "Cobrado últimos 120 días": r.nRecent ? Math.round(r.recent) : null, "Precio de lista": Math.round(r.list),
     "Margen por hora": Math.round(r.marginHour),
   }));
 
@@ -129,7 +140,7 @@ export default function Monetizacion({ filtered, marketing, cutoff, filters }: P
       <section className="card">
         <h2>¿El precio por tamaño de casa es lineal?</h2>
         <p className="muted small">
-          Servicio Standard con pago por servicio registrado ({laborRange}): precio real contra la lista vigente, y margen por hora de trabajo (horas estimadas de la lista)
+          Servicio Standard. Precio real y margen por hora con el pago por servicio registrado ({laborRange}); lo cobrado en los últimos 120 días contra la lista vigente
         </p>
         <div className="chart">
           <ResponsiveContainer width="100%" height={300}>
@@ -141,6 +152,7 @@ export default function Monetizacion({ filtered, marketing, cutoff, filters }: P
               <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [`USD ${v}`, String(n)]} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar yAxisId="p" dataKey="Precio real" fill="#151C25" radius={[6, 6, 0, 0]} />
+              <Bar yAxisId="p" dataKey="Cobrado últimos 120 días" fill="#2E68F5" radius={[6, 6, 0, 0]} />
               <Bar yAxisId="p" dataKey="Precio de lista" fill="#C8D3E3" radius={[6, 6, 0, 0]} />
               <Line yAxisId="h" dataKey="Margen por hora" stroke="#2E68F5" strokeWidth={3} dot={{ r: 4, fill: "#fff", strokeWidth: 2 }} />
             </ComposedChart>
@@ -148,25 +160,26 @@ export default function Monetizacion({ filtered, marketing, cutoff, filters }: P
         </div>
         <div className="table-wrap">
           <table className="goal-table">
-            <thead><tr><th>Tamaño</th><th>Servicios</th><th>Precio real</th><th>Precio de lista</th><th>Diferencia</th><th>Pago limpiadora</th><th>Margen %</th><th>Margen por hora</th></tr></thead>
+            <thead><tr><th>Tamaño</th><th>Servicios</th><th>Precio real</th><th>Pago limpiadora</th><th>Margen %</th><th>Margen por hora</th><th>Cobrado últimos 120 días</th><th>Precio de lista</th><th>Diferencia actual</th></tr></thead>
             <tbody>
               {bySize.filter((r) => r.n > 0).map((r) => (
                 <tr key={r.label}>
                   <td>{r.label}</td>
                   <td>{fmtInt(r.n)}</td>
                   <td>{fmtUsd(r.price)}</td>
-                  <td>{fmtUsd(r.list)}</td>
-                  <td className={r.gap < -0.03 ? "down" : r.gap > 0.03 ? "up" : ""}>{r.gap > 0 ? "+" : ""}{fmtPct(r.gap)}</td>
                   <td>{fmtUsd(r.labor)}</td>
                   <td>{fmtPct(r.marginPct)}</td>
                   <td><b>{fmtUsd(r.marginHour)}</b></td>
+                  <td>{r.nRecent ? `${fmtUsd(r.recent)} (${fmtInt(r.nRecent)})` : "–"}</td>
+                  <td>{fmtUsd(r.list)}</td>
+                  <td className={r.gap === null ? "" : r.gap < -0.03 ? "down" : r.gap > 0.03 ? "up" : ""}>{r.gap === null ? "–" : `${r.gap > 0 ? "+" : ""}${fmtPct(r.gap)}`}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <SectionNote>
-          La lista vigente se compara con lo cobrado en el periodo, que en parte se cobró con listas anteriores. Si el margen por hora baja en las casas grandes, el precio no está creciendo al ritmo del trabajo.
+          Kiki&apos;s sube precios de forma gradual y la lista vigente tiene entre 90 y 180 días, así que solo lo cobrado en los últimos 120 días se compara con ella (entre paréntesis, servicios). Si el margen por hora baja en las casas grandes, el precio no está creciendo al ritmo del trabajo.
         </SectionNote>
       </section>
 

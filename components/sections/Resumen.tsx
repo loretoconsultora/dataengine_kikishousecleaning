@@ -55,7 +55,7 @@ export default function Resumen({ visits, filtered, marketing, cutoff, filters, 
   const sizes = useMemo(() => distribution(filtered, "size_bucket", cutoff, filters.period), [filtered, cutoff, filters.period]);
   const families = useMemo(() => distribution(filtered, "service_family", cutoff, filters.period), [filtered, cutoff, filters.period]);
   const freqs = useMemo(() => distribution(filtered, "frequency", cutoff, filters.period), [filtered, cutoff, filters.period]);
-  const sources = useMemo(() => distribution(filtered, "client_source", cutoff, filters.period), [filtered, cutoff, filters.period]);
+  const regions = useMemo(() => distribution(filtered, "region", cutoff, filters.period), [filtered, cutoff, filters.period]);
   const ahead = useMemo(() => scheduledAhead(filtered, cutoff), [filtered, cutoff]);
   const aheadAvg = avg(ahead.slice(0, 7).map((a) => a.clients));
 
@@ -184,9 +184,9 @@ export default function Resumen({ visits, filtered, marketing, cutoff, filters, 
             <CategoryPie title="Tamaño de casa" data={sizes} />
             <CategoryPie title="Tipo de servicio" data={families} />
             <CategoryPie title="Frecuencia" data={freqs} />
-            <CategoryPie title="Fuente del cliente" data={sources} />
+            <CategoryPie title="Región" data={regions} />
           </div>
-          <p className="muted small note">Tipo de servicio, frecuencia y fuente son clasificaciones provisionales, pendientes de validar con Kiki&apos;s.</p>
+          <p className="muted small note">Tipos de servicio validados con Kiki&apos;s: una casa parcial (solo planta baja) cuenta como servicio por horas. DND significa &quot;no contactar&quot;, no servicio único.</p>
         </section>
 
         <section className="card">
