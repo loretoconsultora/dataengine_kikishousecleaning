@@ -45,7 +45,7 @@ export function computeFindings(visits: Visit[], marketing: WeekMarketing[], ops
   const recent = visits.filter((v) => v.status === "realizado" && t(v.week_start) >= from && t(v.week_start) < end);
   const priced = recent.filter((v) => (v.price ?? 0) > 0);
   const ticket = avg(priced.map((v) => v.price!));
-  const tip = avg(priced.map((v) => v.tip ?? 0));
+  const tip = avg(priced.map((v) => Math.max(0, v.tip ?? 0))); // propinas negativas = descuentos
   const wk = marketing.filter((m) => t(m.week_start) >= from && t(m.week_start) < end && (m.sales ?? 0) > 0 && (m.labor ?? 0) > 0);
   const sales = wk.reduce((a, m) => a + (m.sales ?? 0), 0);
   const labor = wk.reduce((a, m) => a + (m.labor ?? 0), 0);

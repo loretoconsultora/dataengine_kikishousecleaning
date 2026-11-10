@@ -20,6 +20,8 @@ const ADDONS: { key: keyof Visit; label: string }[] = [
 ];
 
 const DAY = 86_400_000;
+// Visitas por mes según la frecuencia contratada (52 semanas ÷ 12 meses).
+const VISITS_PER_MONTH: Record<string, number> = { Semanal: 4.33, Quincenal: 2.17, Mensual: 1 };
 
 export default function Monetizacion({ filtered, marketing, cutoff, filters }: Props) {
   const end = new Date(weekStartOf(cutoff) + "T00:00:00Z").getTime();
@@ -39,7 +41,9 @@ export default function Monetizacion({ filtered, marketing, cutoff, filters }: P
     : "";
 
   const ticket = avg(priced.map((v) => v.price!));
-  const tip = avg(priced.map((v) => v.tip ?? 0));
+  // Propinas negativas en el Excel son descuentos: no cuentan como propina.
+  const tipOf = (v: Visit) => Math.max(0, v.tip ?? 0);
+  const tip = avg(priced.map(tipOf));
   const tipPct = ticket ? tip / ticket : 0;
   // Margen del periodo con la nómina semanal de la hoja KPI (global, no se separa por ciudad ni servicio).
   const wk = marketing.filter((m) => {
@@ -59,7 +63,7 @@ export default function Monetizacion({ filtered, marketing, cutoff, filters }: P
     for (const v of priced) {
       if (!m.has(v.week_start)) m.set(v.week_start, { p: [], t: [] });
       m.get(v.week_start)!.p.push(v.price!);
-      m.get(v.week_start)!.t.push(v.tip ?? 0);
+      m.get(v.week_start)!.t.push(tipOf(v));
     }
     return [...m.entries()].sort(([a], [b]) => a.localeCompare(b)).slice(-WINDOW).map(([w, x]) => ({
       label: fmtWeek(w), ticket: Math.round(avg(x.p)), propina: Math.round(avg(x.t)),
@@ -97,7 +101,7 @@ export default function Monetizacion({ filtered, marketing, cutoff, filters }: P
     return [...groups.entries()].map(([f, vs]) => {
       const p = avg(vs.map((v) => v.price!));
       const l = avg(vs.map((v) => v.labor_cost!));
-      return { f, n: vs.length, price: p, labor: l, margin: p - l, pct: p ? (p - l) / p : 0, tip: avg(vs.map((v) => v.tip ?? 0)) };
+      return { f, n: vs.length, price: p, labor: l, margin: p - l, pct: p ? (p - l) / p : 0, tip: avg(vs.map(tipOf)), perMonth: (p - l) * (VISITS_PER_MONTH[f] ?? 1) };
     }).sort((a, b) => b.n - a.n);
   }, [withLabor]);
 
@@ -168,8 +172,10 @@ export default function Monetizacion({ filtered, marketing, cutoff, filters }: P
 
       <section className="grid-2">
         <div className="card">
-          <h2>Ticket y propina por semana</h2>
-          <p className="muted small">Últimas {WINDOW} semanas con servicios</p>
+          <h2>¿Cuánto se cobra por servicio cada semana?</h2>
+          <p className="muted small">
+            Cada barra es una semana: en negro el precio promedio por servicio y en azul la propina promedio que se suma encima. Últimas {WINDOW} semanas.
+          </p>
           <div className="chart">
             <ResponsiveContainer width="100%" height={230}>
               <BarChart data={weekly} margin={{ top: 10, right: 8, left: -14, bottom: 0 }}>
@@ -179,23 +185,31 @@ export default function Monetizacion({ filtered, marketing, cutoff, filters }: P
                 <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [`USD ${v}`, String(n)]} />
                 <Bar dataKey="ticket" name="Ticket" stackId="a" fill="#151C25" />
                 <Bar dataKey="propina" name="Propina" stackId="a" fill="#2E68F5" radius={[6, 6, 0, 0]} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
               </BarChart>
             </ResponsiveContainer>
           </div>
+          <SectionNote>
+            El precio es estable; la propina es baja e irregular ({fmtPct(tipPct, 1)} del ticket). Un cobro con tarjeta que sugiera propina al pagar suele subirla.
+          </SectionNote>
         </div>
         <div className="card">
-          <h2>Por frecuencia</h2>
-          <p className="muted small">Precio, pago y margen promedio por servicio ({laborRange})</p>
+          <h2>¿Qué frecuencia deja más?</h2>
+          <p className="muted small">Por servicio y por cliente al mes. Margen = precio − pago a la limpiadora ({laborRange}).</p>
           <div className="table-wrap">
             <table className="goal-table">
-              <thead><tr><th>Frecuencia</th><th>Servicios</th><th>Precio</th><th>Margen</th><th>Margen %</th><th>Propina</th></tr></thead>
+              <thead><tr><th>Frecuencia</th><th>Servicios</th><th>Precio</th><th>Margen por servicio</th><th>Propina</th><th>Margen por cliente al mes</th></tr></thead>
               <tbody>
                 {byFreq.map((r) => (
-                  <tr key={r.f}><td>{r.f}</td><td>{fmtInt(r.n)}</td><td>{fmtUsd(r.price)}</td><td>{fmtUsd(r.margin)}</td><td>{fmtPct(r.pct)}</td><td>{fmtUsd(r.tip)}</td></tr>
+                  <tr key={r.f}><td>{r.f}</td><td>{fmtInt(r.n)}</td><td>{fmtUsd(r.price)}</td><td>{fmtUsd(r.margin)} <span className="muted">({fmtPct(r.pct)})</span></td><td>{fmtUsd(r.tip)}</td><td><b>{VISITS_PER_MONTH[r.f] ? fmtUsd(r.perMonth) : "–"}</b></td></tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <SectionNote>
+            Por servicio, el cliente semanal paga menos; pero hace unas 4 visitas al mes, así que deja más margen por cliente.
+            Pasar clientes de mensual a quincenal es una de las palancas más rentables. Margen por cliente al mes = margen por servicio × visitas al mes (semanal 4.33, quincenal 2.17, mensual 1).
+          </SectionNote>
           <h3 style={{ marginTop: 20 }}>Add-ons</h3>
           <ul className="bars">
             {ADDONS.map((a) => {
